@@ -10,43 +10,6 @@ cdef class Force:
     cpdef int evaluate(self,np.ndarray[DTYPE_t, ndim=1] coords, np.ndarray[DTYPE_t, ndim=1] force):
         return 0
 
-cdef class RouxPanForce(Force):
-    """
-    2-dimensional potential defined in:
-    Pan and Roux (2008) Building Markov state models along pathways to determine free energies and rates of transitions
-    J. Chem. Phys. 129, 064107; doi:10.1063/1.2959573 
-    """
-
-    @cython.boundscheck(False)
-    @cython.wraparound(False) 
-    cpdef int evaluate(self,np.ndarray[DTYPE_t, ndim=1] coords, np.ndarray[DTYPE_t, ndim=1] force):
-        cdef double x,y,x2,y2,t1,t2,t3,fx,fy
-        
-        x = coords[0]
-        y = coords[1]
-
-        x2 = x**2
-        y2 = y**2
-        t1 = exp(-y2 - (1 - x)**2)
-        t2 = exp(-y2 - (1 + x)**2)
-        t3 = exp(-(8.0/25)*(x2 + y2 + 20.0*(x + y)**2))
-
-        fx = -3.0*(2.0 - 2.0*x)*t1 \
-            + 3.0*(2 + 2*x)*t2 \
-            - 15.0*(8.0/25)*(2*x + 20.0*(2*x + 2*y))*t3 \
-            + 4*(32.0/625)*x**3
-
-
-        fy = 6.0*y*t1 \
-            + 6.0*y*t2 \
-            -15.0*(8.0/25)*(2*y + 20.0*(2*x + 2*y))*t3 \
-            + 4*(32.0/625)*y**3 \
-            -4.0*(2.0/5)*exp(-2.0 - 4.0*y)
-            
-        force[0] = -fx
-        force[1] = -fy
-        
-        return 0
         
 cdef class MuellerForce(Force):
     """
@@ -151,6 +114,39 @@ cdef class RuggedMuellerForce(Force):
         force[0] = -fx
         force[1] = -fy
         
+        return 0
+
+cdef class DoubleWellForce(Force):
+    '''
+    Simple one-dimensional double-well potential
+    '''
+    cdef double _alpha, _beta, _delta, _v0
+
+    def __init__(self, alpha=1, beta=0, delta=1, v0=5):
+        self._alpha = alpha
+        self._beta = beta
+        self._delta = delta
+        self._v0 = v0
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cpdef int evaluate(self, np.ndarray[DTYPE_t,ndim=1] coords, np.ndarray[DTYPE_t,ndim=1] force):
+        cdef double x,fx
+        cdef double alpha, beta, delta, v0, x_over_alpha
+
+        alpha = self._alpha
+        beta = self._beta
+        delta = self._delta
+        v0 = self._v0
+        
+        x = coords[0]
+
+        x_over_alpha = x / alpha
+
+        fx = 4 * ( ( x_over_alpha**2 - delta ) * x/alpha**2 ) + (beta/alpha)
+
+        force[0] = -fx
+
         return 0
 
 cdef class Dickson2dPeriodicForce(Force):

@@ -27,9 +27,6 @@ ff_files = ["ForceFields.{}".format(fext),"ForceFields.pxd"] if use_cython else 
 ext_modules = [Extension("ForceFields", ff_files,
             include_dirs=[numpy_include],
             extra_compile_args=["-O3","-ffast-math"]),
-            Extension("cIntegrator", ["cIntegrator.{}".format(fext),"randomkit.c"],
-            include_dirs=[numpy_include],
-            extra_compile_args=["-O3","-ffast-math"]),
             Extension("cIntegratorSimple", ["cIntegratorSimple.{}".format(fext),"randomkit.c"],
             include_dirs=[numpy_include],
             extra_compile_args=["-O3","-ffast-math"])]
