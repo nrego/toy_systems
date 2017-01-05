@@ -144,6 +144,7 @@ cdef class DoubleWellForce(Force):
         x_over_alpha = x / alpha
 
         fx = 4 * ( ( x_over_alpha**2 - delta ) * x/alpha**2 ) + (beta/alpha)
+        fx = v0 * fx
 
         force[0] = -fx
 
