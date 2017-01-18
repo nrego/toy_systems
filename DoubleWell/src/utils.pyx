@@ -56,8 +56,8 @@ def find_bounds(x0, x1, fn, bin_grad=1.0):
     else:
         xmid = (x0+x1) / 2
 
-        bounds_lower = find_bounds(x0, xmid, V, bin_grad)
-        bounds_upper = find_bounds(xmid, x1, V, bin_grad)
+        bounds_lower = find_bounds(x0, xmid, fn, bin_grad)
+        bounds_upper = find_bounds(xmid, x1, fn, bin_grad)
 
         return np.append( bounds_lower, bounds_upper )
 
@@ -143,10 +143,15 @@ def construct_bin_bounds(alpha=1, beta=0, delta=1, v0=5, bin_grad=1.0):
 
         if x_min_right > x_max:
             right_bounds = find_bounds(x_max_right, x_min_right, p, bin_grad)
+        else:
+            right_bounds = np.array([])
 
-
-        bounds = np.append(bounds, left_bounds)
-        bounds = np.append(bounds, right_bounds)
+        bounds = np.append(left_bounds, right_bounds)
 
         bounds = np.unique(bounds)
+        bounds = np.append(-float('inf'), bounds)
+        bounds = np.append(bounds, float('inf'))
         bounds.sort()
+
+
+        return bounds

@@ -7,11 +7,11 @@ import numpy as np
 import west
 from west.propagators import WESTPropagator
 from west import Segment, WESTSystem
-from westpa.binning import VoronoiBinMapper
+from westpa.binning import RectilinearBinMapper
 
 import cIntegratorSimple
 import ForceFields
-from utils import dfunc
+from utils import construct_bin_bounds
 
 import logging
 log = logging.getLogger(__name__)
@@ -35,17 +35,17 @@ class SimpleLangevinPropagator(WESTPropagator):
         super(SimpleLangevinPropagator, self).__init__(rc)
 
         rc = self.rc.config['west','simplelangevin']
-        self.ndim = rc.get('ndim', 2)
+        self.ndim = rc.get('ndim', 1)
         self.nsteps = rc.get('blocks_per_iteration', 2)
         self.nsubsteps = rc.get('steps_per_block')
         self.beta = rc.get('beta')
 
-        ff = ForceFields.MuellerForce()
+        ff = ForceFields.DoubleWellForce()
         MASS = 1.0
         XI = 1.5
         BETA = self.beta
-        NDIMS = 2
-        DT = 1e-6
+        NDIMS = 1
+        DT = 1e-3
         ISPERIODIC = np.array([0, 0], dtype=np.int)
         BOXSIZE = np.array([1.0E8, 1.0E8], dtype=pcoord_dtype)
 
@@ -54,9 +54,9 @@ class SimpleLangevinPropagator(WESTPropagator):
     def get_pcoord(self, state):
         pcoord = None
         if state.label == 'initA':
-            pcoord = [-1.0, 1.0]
+            pcoord = [-1.0]
         if state.label == 'initB':
-            pcoord = [0.5, 0.0]
+            pcoord = [1.0]
 
         state.pcoord = pcoord
 
@@ -87,31 +87,16 @@ class System(WESTSystem):
 
         rc = self.rc.config['west', 'system']
 
-        self.pcoord_ndim = 2
+        self.pcoord_ndim = 1
         self.pcoord_len = 2
         self.pcoord_dtype = pcoord_dtype
         self.target_count = rc.get('target_count')
-        self.nbins = rc.get('nbins')
+        #self.nbins = rc.get('nbins')
+        bounds = construct_bin_bounds()
+        self.nbins = len(bounds) - 1
+        self.bin_mapper = RectilinearBinMapper([list(bounds)])
 
-        slen = self.nbins
-        #y[:] = 1.0
-        centers = np.zeros((self.nbins, self.pcoord_ndim), dtype=self.pcoord_dtype)
-
-        #endpoint1 = np.array([-0.55918841,  1.44078036])
-        #endpoint2 = np.array([ 0.61810024,  0.03152928])
-        endpoint1 = np.array([-1.5, 1.0])
-        endpoint2 = np.array([1.0, 1.0])
-        centers[:,0] = np.linspace(endpoint1[0], endpoint2[0], self.nbins)
-        centers[:,1] = np.linspace(endpoint1[1], endpoint2[1], self.nbins)
-
-        self.bin_mapper = VoronoiBinMapper(dfunc, centers)
+        assert self.bin_mapper.nbins == self.nbins
         self.bin_target_counts = np.zeros((self.bin_mapper.nbins,), dtype=np.int_)
         self.bin_target_counts[...] = self.target_count
 
-        slen = self.nbins 
-        self.sm_params = {'slen': [slen],
-                          'kappa': 0.1,
-                          'dtau': 0.1,
-                          'fixed_ends': False,
-                          'sciflag': True,
-                          'fourierflag': False}
